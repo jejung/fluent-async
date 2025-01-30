@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fluent-async"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Jean Jung <jean.jung@rocketmail.com>"]
 readme = "README.md"
