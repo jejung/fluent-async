@@ -85,6 +85,40 @@ async def test_fluent_accessing_properties():
     assert await subject.data().another_fluent().async_cached_prop.field == 'see what?'
 
 
+async def test_fluent_starting_with_async_properties() -> None:
+    class Another:
+        def __init__(self, holding: str) -> None:
+            self.holding = holding
+
+    class Subject:
+
+        def __init__(self) -> None:
+            self.cached = 0
+            self.not_cached = 0
+
+        @fluent
+        @async_property
+        async def as_first(self) -> Another:
+            self.not_cached += 1
+            return Another(f'not_cached:{self.not_cached}')
+
+        as_first = cast(Another, as_first)
+
+        @fluent
+        @async_cached_property
+        async def as_first_but_cached(self) -> Another:
+            self.cached += 1
+            return Another(f'cached:{self.cached}')
+
+        as_first_but_cached = cast(Another, as_first_but_cached)
+
+    sub = Subject()
+    assert 'not_cached:1' == await sub.as_first.holding
+    assert 'not_cached:2' == await sub.as_first.holding
+    assert 'cached:1' == await sub.as_first_but_cached.holding
+    assert 'cached:1' == await sub.as_first_but_cached.holding
+
+
 async def test_fluent_raising_exception() -> None:
     class HeavyFluentBuilder:
         @fluent
