@@ -5,6 +5,15 @@ description = ""
 authors = ["Jean Jung <jean.jung@rocketmail.com>"]
 readme = "README.md"
 license = "MIT"
+repository = "https://github.com/jejung/fluent-async"
+classifiers = [
+    "Development Status :: 1 - Pre Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
 packages = [
     {include="fluent_async"}
 ]

@@ -1,4 +1,8 @@
+from functools import wraps
 from typing import Callable, Any, Awaitable, Dict, Tuple, Self, TypeVar, Generic
+
+from async_property.base import AsyncPropertyDescriptor
+from async_property.cached import AsyncCachedPropertyDescriptor
 
 T = TypeVar("T")
 
@@ -23,6 +27,30 @@ class Fluent(Awaitable[T], Generic[T]):
             return getattr(current, item)
         return Fluent(passthrough, operation=f'(await {self._operation}).{item}')
 
+    def __get__(self, instance, owner):
+        async def passthrough() -> Any:
+            current = await self
+            if isinstance(current, Awaitable):
+                return (await current).__get__(instance, owner)
+            return current.__get__(instance, owner)
+        return Fluent(passthrough, operation=self._operation)
+
+    def __set__(self, instance, value):
+        async def passthrough() -> Any:
+            current = await self
+            if isinstance(current, Awaitable):
+                return (await current).__set__(instance, value)
+            return current.__set__(instance, value)
+        return Fluent(passthrough, operation=f'{self._operation} = {value!r}')
+
+    def __delete__(self, instance):
+        async def passthrough() -> Any:
+            current = await self
+            if isinstance(current, Awaitable):
+                return (await current).__delete__(instance)
+            return current.__delete__(instance)
+        return Fluent(passthrough, operation=f'del {self._operation}')
+
     def __call__(self, *args, **kwargs) -> Self:
         async def passthrough() -> Any:
             current = await self
@@ -42,7 +70,9 @@ class Fluent(Awaitable[T], Generic[T]):
         return f'{self._operation}({args_passing})'
 
 
-def fluent(fn: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+def fluent(
+    fn: Callable[..., Awaitable[T]] | AsyncPropertyDescriptor | AsyncCachedPropertyDescriptor,
+) -> Callable[..., Awaitable[T]]:
     """
     Decorates a method so that it can be used in a fluent manner.
 
@@ -85,6 +115,12 @@ def fluent(fn: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
     :return: wrapped function.
     """
 
+    if not callable(fn):
+        async def passthrough():
+            return fn
+        return Fluent(passthrough, operation='.' + fn.field_name)
+
+    @wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Awaitable[T]:
         return Fluent(fn, args, kwargs, operation='.' + fn.__name__)
 
